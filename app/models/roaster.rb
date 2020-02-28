@@ -3,11 +3,6 @@ class Roaster < ApplicationRecord
 
   validates :name, presence: true
 
-  def name=(*args)
-    if self.name != nil
-      raise Exceptions::ImmutableAttributeError
-    else
-      super
-    end
-  end
+  make_immutable(:name)
+
 end
