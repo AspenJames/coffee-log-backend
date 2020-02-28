@@ -25,42 +25,16 @@ RSpec.describe Roaster, type: :model do
     end
 
     it "cannot modify its name once set" do
-      expect{@roaster.name = "Broadcast"}.to raise_exception(Exceptions::ImmutableAttributeError)
+      expect{@roaster.update(name: "Broadcast")}.to raise_exception(Exceptions::ImmutableAttributeError)
       expect(@roaster.name).to eq("Stumptown")
     end
   end
 
   context "Relationships:" do
     describe "Coffee:" do
-      before :each do
-        @roaster = create(:roaster)
-      end
-
-      it "can return a collection of coffees" do
-        expect(@roaster.respond_to?(:coffees)).to be true
-        expect(@roaster.coffees).to be_a_kind_of(ActiveRecord::Associations::CollectionProxy)
-      end
-
-      it "starts with no associated coffees" do
-        expect(@roaster.coffees.length).to eq 0
-      end
-
-      it "returns assc. coffee after creation" do
-        c = create(:coffee, roaster: @roaster)
-        expect(@roaster.coffees.length).to eq 1
-        expect(@roaster.coffees.first).to eq c
-        expect(@roaster.coffees.first.roaster).to eq @roaster
-      end
-
-      it "can return multiple coffees" do
-        5.times{ create(:coffee, roaster: @roaster) }
-
-        expect(@roaster.coffees.length).to eq 5
-
-        @roaster.coffees.each do |c|
-          expect(c.class).to be Coffee
-          expect(c.roaster).to eq @roaster
-        end
+      it_behaves_like "a has_many relationship" do
+        let(:described) { create(:roaster) }
+        let(:relation_name) { :coffees }
       end
     end
   end
