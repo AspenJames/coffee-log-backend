@@ -4,6 +4,7 @@ ENV['RAILS_ENV'] ||= 'test'
 
 require File.expand_path('../config/environment', __dir__)
 require File.expand_path('../lib/exceptions', __dir__)
+require File.expand_path('./support/attributes', __dir__)
 require File.expand_path('./support/factory_bot', __dir__)
 require File.expand_path('./support/relationships', __dir__)
 
