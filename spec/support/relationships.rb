@@ -5,12 +5,12 @@ RSpec.shared_examples "a belongs_to relationship" do
     raise DescribedObjectRequired if !respond_to?(:described)
     raise RelationMethodNameRequired if !respond_to?(:relation_name)
   end
-  
+
   it "responds to #relation_name and returns an instance" do
     expect(described.respond_to?(relation_name)).to be true
     expect(described.send(relation_name)).not_to be_a_kind_of(ActiveRecord::Associations::CollectionProxy)
   end
-  
+
   it "belongs to the given relation" do
     rel = described.send(relation_name)
     relation_class = relation_name.to_s.capitalize.constantize
@@ -210,21 +210,19 @@ RSpec.shared_examples "a has_one, through: relationship" do
 
   it "can return a single related instance" do
     described_class_sym = described_class.name.downcase.to_sym
+    described_class_sym_plural = described_class.name.downcase.pluralize.to_sym
     through_sym = through_name.to_s.singularize.to_sym
-    rel_sym = relation_name.to_s.singularize.to_sym
 
     through_opt = {}
     through_opt[described_class_sym] = described
 
-    rel_opt = {}
-    rel_opt[through_sym] = create(through_sym, through_opt)
-
-    rel = create(rel_sym, rel_opt)
+    through = create(through_sym, through_opt)
+    rel = through.send(relation_name)
 
     related = described.send(relation_name)
     expect(related).to be_a_kind_of(relation_class)
     expect(related).to eq rel
-    expect(rel.send(described_class_sym)).to eq described
+    expect(rel.send(described_class_sym_plural)).to include(described)
   end
 end
 

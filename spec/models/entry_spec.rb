@@ -53,6 +53,11 @@ RSpec.describe Entry, type: :model do
     end
 
     describe "Coffee" do
+      it_behaves_like "a has_one, through: relationship" do
+        let(:described) { create(:entry )}
+        let(:relation_name) { :coffee }
+        let(:through_name) { :recipe }
+      end
     end
   end
 end
