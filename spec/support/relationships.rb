@@ -144,6 +144,90 @@ RSpec.shared_examples "a has_many, through relationship" do
   end
 end
 
+RSpec.shared_examples "a has_one relationship" do
+  # described     => instance of class provided for testing
+  # relation_name => symbol passed to has_many in model file
+  before(:all) do
+    raise DescribedObjectRequired if !respond_to?(:described)
+    raise RelationMethodNameRequired if !respond_to?(:relation_name)
+  end
+
+  def relation_class
+    relation_name.to_s.singularize.capitalize.constantize
+  end
+
+  it "responds to #relation_name and does not return a collection" do
+    expect(described.respond_to?(relation_name)).to be true
+    expect(described.send(relation_name)).not_to be_a_kind_of(ActiveRecord::Associations::CollectionProxy)
+  end
+
+  it "initially sets relation to nil" do
+    expect(described.send(relation_name)).to be nil
+  end
+
+  it "can return a single related instance" do
+    relation_class_sym = relation_name.to_s.singularize.to_sym
+    described_class_sym = described_class.name.downcase.to_sym
+
+    opts = {}
+    opts[described_class_sym] = described
+
+    rel = create(relation_class_sym, opts)
+    related = described.send(relation_name)
+
+    expect(related).to be_a_kind_of(relation_class)
+    expect(related).to eq rel
+    expect(related.send(described_class_sym)).to eq described
+  end
+end
+
+RSpec.shared_examples "a has_one, through: relationship" do
+  # described     => instance of class provided for testing
+  # relation_name => symbol passed to has_many in model file
+  # through_name  => symbol passed to through: in model file
+  before(:all) do
+    raise DescribedObjectRequired if !respond_to?(:described)
+    raise RelationMethodNameRequired if !respond_to?(:relation_name)
+    raise ThroughNameRequired if !respond_to?(:through_name)
+  end
+
+  def relation_class
+    relation_name.to_s.singularize.capitalize.constantize
+  end
+
+  def through_class
+    through_name.to_s.singularize.capitalize.constantize
+  end
+
+  it "responds to #relation_name and does not return a collection" do
+    expect(described.respond_to?(relation_name)).to be true
+    expect(described.send(relation_name)).not_to be_a_kind_of(ActiveRecord::Associations::CollectionProxy)
+  end
+
+  it "initially has an empty relation set" do
+    expect(described.send(relation_name)).to be nil
+  end
+
+  it "can return a single related instance" do
+    described_class_sym = described_class.name.downcase.to_sym
+    through_sym = through_name.to_s.singularize.to_sym
+    rel_sym = relation_name.to_s.singularize.to_sym
+
+    through_opt = {}
+    through_opt[described_class_sym] = described
+
+    rel_opt = {}
+    rel_opt[through_sym] = create(through_sym, through_opt)
+
+    rel = create(rel_sym, rel_opt)
+
+    related = described.send(relation_name)
+    expect(related).to be_a_kind_of(relation_class)
+    expect(related).to eq rel
+    expect(rel.send(described_class_sym)).to eq described
+  end
+end
+
 class DescribedObjectRequired < StandardError
   DEFAULT_MSG = <<-TEXT
   ":described" must be defined.
