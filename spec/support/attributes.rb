@@ -36,9 +36,6 @@ RSpec.shared_examples "an optional attribute" do
     described = create(described_class_sym, attrs)
     expect(described.valid?).to be true
   end
-
-  it_behaves_like "a mutable attribute" do
-  end
 end
 
 RSpec.shared_examples "an immutable attribute" do

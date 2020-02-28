@@ -25,6 +25,10 @@ RSpec.describe Coffee, type: :model do
     describe "price" do
       it_behaves_like "an optional attribute" do
         let(:attribute_name) { :price }
+      end
+
+      it_behaves_like "a mutable attribute" do
+        let(:attribute_name) { :price }
         let(:update_value) { 3500 }
       end
     end
