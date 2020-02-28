@@ -10,14 +10,14 @@ RSpec.describe Roaster, type: :model do
     end
 
     it "is valid with a name" do
-      r = Roaster.create(name: "Stumptown")
+      r = create(:roaster)
       expect(r).to be_valid
     end
   end
 
   context "Attributes:" do
     before :all do
-      @roaster = Roaster.create(name: "Stumptown")
+      @roaster = create(:roaster, name: "Stumptown")
     end
 
     it "can return its name" do
@@ -33,7 +33,7 @@ RSpec.describe Roaster, type: :model do
   context "Relationships:" do
     describe "Coffee:" do
       before :each do
-        @roaster = Roaster.create(name: "Broadcast Coffee #{Time.now}")
+        @roaster = create(:roaster)
       end
 
       it "can return a collection of coffees" do
