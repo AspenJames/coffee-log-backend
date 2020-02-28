@@ -73,6 +73,8 @@ RSpec.shared_examples "a mutable attribute" do
     described = create(described_class_sym)
     orig_val = described.send(attribute_name)
 
+    update_value ||= "UpdateValue"
+
     update_arg = {}
     update_arg[attribute_name] = update_value
     described.update(update_arg)
