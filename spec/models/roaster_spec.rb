@@ -46,26 +46,14 @@ RSpec.describe Roaster, type: :model do
       end
 
       it "returns assc. coffee after creation" do
-        c = Coffee.create(
-          origin: "Java Garut",
-          roast_date: Date.new,
-          price: 2500,
-          roaster: @roaster
-        )
+        c = create(:coffee, roaster: @roaster)
         expect(@roaster.coffees.length).to eq 1
         expect(@roaster.coffees.first).to eq c
         expect(@roaster.coffees.first.roaster).to eq @roaster
       end
 
       it "can return multiple coffees" do
-        5.times do |i|
-          Coffee.create(
-            origin: "#{i}Colombia",
-            roast_date: Date.new,
-            price: 2000,
-            roaster: @roaster
-          )
-        end
+        5.times{ create(:coffee, roaster: @roaster) }
 
         expect(@roaster.coffees.length).to eq 5
 
