@@ -54,6 +54,7 @@ RSpec.describe Coffee, type: :model do
         let(:described) { create(:coffee) }
         let(:relation_name) { :entries }
         let(:through_name) { :recipes }
+        let(:reflexive) { :coffee }
       end
     end
   end

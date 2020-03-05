@@ -1,35 +1,56 @@
 RSpec.shared_examples "a belongs_to relationship" do
+  ##
+  # Describes a belongs_to relationship
   # described     => instance of class provided for testing
   # relation_name => symbol passed to belongs_to in model file
+  # reflexive     => symbol describing reflexive method;
+  #                  optional, defaults to has_many form
+
   before(:all) do
+    # ensure required values are set
     raise DescribedObjectRequired if !respond_to?(:described)
     raise RelationMethodNameRequired if !respond_to?(:relation_name)
   end
 
-  it "responds to #relation_name and returns an instance" do
+  it "responds to #relation_name and does not return a collection" do
     expect(described.respond_to?(relation_name)).to be true
     expect(described.send(relation_name)).not_to be_a_kind_of(ActiveRecord::Associations::CollectionProxy)
   end
 
   it "belongs to the given relation" do
     rel = described.send(relation_name)
-    relation_class = relation_name.to_s.capitalize.constantize
-    described_class_sym_plural = described_class.name.downcase.pluralize.to_sym
+    relation_class = get_class_constant(relation_name)
+    described_class_sym_plural = get_class_sym_plural(described_class)
+    reflex = respond_to?(:reflexive) ? reflexive : described_class_sym_plural
+
     expect(rel).to be_a_kind_of(relation_class)
-    expect(rel.send(described_class_sym_plural)).to include(described)
+    reflexive_relation = rel.send(reflex)
+    if reflexive_relation.respond_to?(:include)
+      expect(reflexive_relation).to include(described)
+    else
+      expect(reflexive_relation).to eq described
+    end
   end
 end
 
 RSpec.shared_examples "a has_many relationship" do
+  ##
+  # Describes a has_many relationship
   # described     => instance of class provided for testing
   # relation_name => symbol passed to has_many in model file
+  # reflexive     => symbol describing reflexive method;
+  #                  optional, defaults to belongs_to form
+
   before(:all) do
+    # ensure required values are set
     raise DescribedObjectRequired if !respond_to?(:described)
     raise RelationMethodNameRequired if !respond_to?(:relation_name)
   end
 
+  ##
+  # Returns class constant of relation
   def relation_class
-    relation_name.to_s.singularize.capitalize.constantize
+    get_class_constant(relation_name)
   end
 
   it "responds to #relation_name and returns a collection" do
@@ -42,8 +63,9 @@ RSpec.shared_examples "a has_many relationship" do
   end
 
   it "can return a single relation" do
-    relation_class_sym = relation_name.to_s.singularize.to_sym
-    described_class_sym = described_class.name.downcase.to_sym
+    relation_class_sym = get_singular_symbol(relation_name)
+    described_class_sym = get_class_sym_singular(described_class)
+    reflex = respond_to?(:reflexive) ? reflexive : described_class_sym
 
     opts = {}
     opts[described_class_sym] = described
@@ -54,12 +76,17 @@ RSpec.shared_examples "a has_many relationship" do
     expect(related.length).to eq 1
     expect(related[0]).to eq rel
     expect(related[0]).to be_a_kind_of(relation_class)
-    expect(related[0].send(described_class_sym)).to eq described
+    if related[0].respond_to?(:include)
+      expect(related[0].send(reflex)).to include(described)
+    else
+      expect(related[0].send(reflex)).to eq described
+    end
   end
 
   it "can return multiple relations" do
-    relation_class_sym = relation_name.to_s.singularize.to_sym
-    described_class_sym = described_class.name.downcase.to_sym
+    relation_class_sym = get_singular_symbol(relation_name)
+    described_class_sym = get_class_sym_singular(described_class)
+    reflex = respond_to?(:reflexive) ? reflexive : described_class_sym
 
     opts = {}
     opts[described_class_sym] = described
@@ -70,27 +97,42 @@ RSpec.shared_examples "a has_many relationship" do
     expect(related.length).to eq 5
     related.each do |r|
       expect(r).to be_a_kind_of(relation_class)
-      expect(r.send(described_class_sym)).to eq described
+      reflexive_relation = r.send(reflex)
+      if reflexive_relation.respond_to?(:include)
+        expect(reflexive_relation).to include(described)
+      else
+        expect(reflexive_relation).to eq described
+      end
     end
   end
 end
 
 RSpec.shared_examples "a has_many, through relationship" do
+  ##
+  # Describes a has_many, through: relationship
   # described     => instance of class provided for testing
   # relation_name => symbol passed to has_many in model file
   # through_name  => symbol passed to through: in model file
+  # reflexive     => symbol describing reflexive method;
+  #                  optional, defaults to has_many form
+
   before(:all) do
+    # ensure required values are set
     raise DescribedObjectRequired if !respond_to?(:described)
     raise RelationMethodNameRequired if !respond_to?(:relation_name)
     raise ThroughNameRequired if !respond_to?(:through_name)
   end
 
+  ##
+  # Returns class constant of relation
   def relation_class
-    relation_name.to_s.singularize.capitalize.constantize
+    get_class_constant(relation_name)
   end
 
+  ##
+  # Returns class constant of through: relation
   def through_class
-    through_name.to_s.singularize.capitalize.constantize
+    through_name.to_s.singularize.camelize.constantize
   end
 
   it "responds to #relation_name and returns a collection" do
@@ -104,8 +146,10 @@ RSpec.shared_examples "a has_many, through relationship" do
 
   it "can return a single relation" do
     described_class_sym = described_class.name.downcase.to_sym
+    described_class_sym_plural = described_class.name.downcase.pluralize.to_sym
     through_sym = through_name.to_s.singularize.to_sym
     rel_sym = relation_name.to_s.singularize.to_sym
+    reflex = respond_to?(:reflexive) ? reflexive : described_class_sym_plural
 
     through_opt = {}
     through_opt[described_class_sym] = described
@@ -118,13 +162,20 @@ RSpec.shared_examples "a has_many, through relationship" do
     related = described.send(relation_name)
     expect(related.length).to eq 1
     expect(related.first).to eq rel
-    expect(rel.send(described_class_sym)).to eq described
+    reflexive_relation = rel.send(reflex)
+    if reflexive_relation.respond_to?(:include)
+      expect(reflexive_relation).to include(described)
+    else
+      expect(reflexive_relation).to eq described
+    end
   end
 
   it "can return multiple relations" do
     described_class_sym = described_class.name.downcase.to_sym
+    described_class_sym_plural = described_class.name.downcase.pluralize.to_sym
     through_sym = through_name.to_s.singularize.to_sym
     rel_sym = relation_name.to_s.singularize.to_sym
+    reflex = respond_to?(:reflexive) ? reflexive : described_class_sym_plural
 
     through_opt = {}
     through_opt[described_class_sym] = described
@@ -139,21 +190,34 @@ RSpec.shared_examples "a has_many, through relationship" do
     expect(related.length).to eq 5
     related.each do |r|
       expect(r).to be_a_kind_of(relation_class)
-      expect(r.send(described_class_sym)).to eq described
+      reflexive_relation = r.send(reflex)
+      if reflexive_relation.respond_to?(:include)
+        expect(reflexive_relation).to include(described)
+      else
+        expect(reflexive_relation).to eq described
+      end
     end
   end
 end
 
 RSpec.shared_examples "a has_one relationship" do
+  ##
+  # Describes a has_one relationship
   # described     => instance of class provided for testing
   # relation_name => symbol passed to has_many in model file
+  # reflexive     => symbol describing reflexive method;
+  #                  optional, defaults to belongs_to form
+
   before(:all) do
+    # ensure required values are set
     raise DescribedObjectRequired if !respond_to?(:described)
     raise RelationMethodNameRequired if !respond_to?(:relation_name)
   end
 
+  ##
+  # Returns class constant of relation
   def relation_class
-    relation_name.to_s.singularize.capitalize.constantize
+    get_class_constant(relation_name)
   end
 
   it "responds to #relation_name and does not return a collection" do
@@ -168,6 +232,7 @@ RSpec.shared_examples "a has_one relationship" do
   it "can return a single related instance" do
     relation_class_sym = relation_name.to_s.singularize.to_sym
     described_class_sym = described_class.name.downcase.to_sym
+    reflex = respond_to?(:reflexive) ? reflexive : described_class_sym
 
     opts = {}
     opts[described_class_sym] = described
@@ -177,26 +242,41 @@ RSpec.shared_examples "a has_one relationship" do
 
     expect(related).to be_a_kind_of(relation_class)
     expect(related).to eq rel
-    expect(related.send(described_class_sym)).to eq described
+    reflexive_relation = related.send(reflex)
+    if reflexive_relation.respond_to?(:include)
+      expect(reflexive_relation).to include(described)
+    else
+      expect(reflexive_relation).to eq described
+    end
   end
 end
 
 RSpec.shared_examples "a has_one, through: relationship" do
+  ##
+  # Describes a has_one, through relationship
   # described     => instance of class provided for testing
-  # relation_name => symbol passed to has_many in model file
+  # relation_name => symbol passed to belongs_to in model file
   # through_name  => symbol passed to through: in model file
+  # reflexive     => symbol describing reflexive method;
+  #                  optional, defaults to belongs_to form
+
   before(:all) do
+    # ensure required values are set
     raise DescribedObjectRequired if !respond_to?(:described)
     raise RelationMethodNameRequired if !respond_to?(:relation_name)
     raise ThroughNameRequired if !respond_to?(:through_name)
   end
 
+  ##
+  # Returns class constant of relation
   def relation_class
-    relation_name.to_s.singularize.capitalize.constantize
+    get_class_constant(relation_name)
   end
 
+  ##
+  # Returns class constant of through: relation
   def through_class
-    through_name.to_s.singularize.capitalize.constantize
+    through_name.to_s.singularize.camelize.constantize
   end
 
   it "responds to #relation_name and does not return a collection" do
@@ -204,14 +284,14 @@ RSpec.shared_examples "a has_one, through: relationship" do
     expect(described.send(relation_name)).not_to be_a_kind_of(ActiveRecord::Associations::CollectionProxy)
   end
 
-  it "initially has an empty relation set" do
+  it "initially has relation set to nil" do
     expect(described.send(relation_name)).to be nil
   end
 
   it "can return a single related instance" do
     described_class_sym = described_class.name.downcase.to_sym
-    described_class_sym_plural = described_class.name.downcase.pluralize.to_sym
     through_sym = through_name.to_s.singularize.to_sym
+    reflex = respond_to(:reflexive) ? reflexive : described_class_sym
 
     through_opt = {}
     through_opt[described_class_sym] = described
@@ -222,7 +302,12 @@ RSpec.shared_examples "a has_one, through: relationship" do
     related = described.send(relation_name)
     expect(related).to be_a_kind_of(relation_class)
     expect(related).to eq rel
-    expect(rel.send(described_class_sym_plural)).to include(described)
+    reflexive_relation = rel.send(reflex)
+    if reflexive_relation.respond_to?(:include)
+      expect(reflexive_relation).to include(described)
+    else
+      expect(reflexive_relation).to eq described
+    end
   end
 end
 
@@ -233,9 +318,7 @@ class DescribedObjectRequired < StandardError
     => ex. a Blog has_many Posts; @blog = Blog.create
     => let(:described) { @blog }
   TEXT
-  def initialize(msg=DEFAULT_MSG)
-    super(msg)
-  end
+  def initialize(msg=DEFAULT_MSG); super(msg); end
 end
 
 class RelationMethodNameRequired < StandardError
@@ -245,9 +328,7 @@ class RelationMethodNameRequired < StandardError
     => ex. class Blog; has_many :posts; end
     => let(:relation_name) { :posts }
   TEXT
-  def initialize(msg=DEFAULT_MSG)
-    super(msg)
-  end
+  def initialize(msg=DEFAULT_MSG); super(msg); end
 end
 
 class ThroughNameRequired < StandardError
@@ -258,7 +339,40 @@ class ThroughNameRequired < StandardError
     => let(:relation_name) { :comments }
     => let(:through_name) { :posts }
   TEXT
-  def initialize(msg=DEFAULT_MSG)
-    super(msg)
-  end
+  def initialize(msg=DEFAULT_MSG); super(msg); end
+end
+
+##
+# Returns a singular class symbol from a class constant
+# get_class_sym(Coffee) #=> :coffee
+def get_class_sym_singular(klass)
+  klass.name.downcase.to_sym
+end
+
+##
+# Returns a plural class symbol from a class constant
+# get_class_sym_plural(Coffee) #=> :coffees
+def get_class_sym_plural(klass)
+  klass.name.downcase.pluralize.to_sym
+end
+
+##
+# Returns a singular symbol rom a plural
+# get_singular_symbol(:coffees) #=> :coffee
+def get_singular_symbol(sym)
+  sym.to_s.singularize.to_sym
+end
+
+##
+# Returns a plural symbol from a singular
+# get_plural_symbol(:coffee) #=> :coffees
+def get_plural_symbol(sym)
+  sym.to_s.pluralize.to_sym
+end
+
+##
+# Returns a class constant from a symbol
+# get_class_constant(:coffee) #=> Coffee
+def get_class_constant(sym)
+  sym.to_s.singularize.camelize.constantize
 end
