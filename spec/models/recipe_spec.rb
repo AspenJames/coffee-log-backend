@@ -33,6 +33,17 @@ RSpec.describe Recipe, type: :model do
         let(:attribute_name){ :time }
         let(:update_value){ "5:30" }
       end
+
+      it "throws an exception if given malformed data" do
+        bad_times = ["4:75", "4.20", "3:30:25",\
+          "two minutes", Time.parse("4:45"), 321, "5::30"]
+        attrs = attributes_for(:recipe)
+        bad_times.each do |t|
+          expect{
+            create(:recipe, time: t)
+          }.to raise_exception(ActiveRecord::RecordInvalid)
+        end
+      end
     end
   end
 
