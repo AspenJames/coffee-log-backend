@@ -30,6 +30,8 @@ group :development, :test do
   gem 'rspec-rails', '~> 3.9.0'
   # FactoryBotRails for test factories
   gem 'factory_bot_rails', '~> 5.1', '>= 5.1.1'
+  # Airbone for api testing
+  gem 'airborne', '~> 0.3.4'
 end
 
 group :development do
