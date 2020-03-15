@@ -132,7 +132,7 @@ RSpec.shared_examples "a has_many, through relationship" do
   ##
   # Returns class constant of through: relation
   def through_class
-    through_name.to_s.singularize.camelize.constantize
+    get_class_constant(through_name)
   end
 
   it "responds to #relation_name and returns a collection" do
@@ -145,36 +145,46 @@ RSpec.shared_examples "a has_many, through relationship" do
   end
 
   it "can return a single relation" do
-    described_class_sym = described_class.name.downcase.to_sym
-    described_class_sym_plural = described_class.name.downcase.pluralize.to_sym
-    through_sym = through_name.to_s.singularize.to_sym
-    rel_sym = relation_name.to_s.singularize.to_sym
+    described_class_sym = get_class_sym_singular(described_class)
+    described_class_sym_plural = get_class_sym_plural(described_class)
+    through_sym = get_singular_symbol(through_name)
+    rel_sym = get_singular_symbol(relation_name)
     reflex = respond_to?(:reflexive) ? reflexive : described_class_sym_plural
 
     through_opt = {}
     through_opt[described_class_sym] = described
 
     rel_opt = {}
-    rel_opt[through_sym] = create(through_sym, through_opt)
+    through_relation = create(through_sym, through_opt)
+    rel_opt[through_sym] = through_relation
 
-    rel = create(rel_sym, rel_opt)
+    begin
+      rel = create(rel_sym, rel_opt)
+    rescue Exception => e
+      rel_opt = {}
+      rel_opt[get_plural_symbol(through_sym)] = [through_relation]
+      rel = create(rel_sym, rel_opt)
+    end
+
 
     related = described.send(relation_name)
     expect(related.length).to eq 1
     expect(related.first).to eq rel
-    reflexive_relation = rel.send(reflex)
-    if reflexive_relation.respond_to?(:include)
-      expect(reflexive_relation).to include(described)
-    else
-      expect(reflexive_relation).to eq described
+    if reflex
+      reflexive_relation = rel.send(reflex)
+      if reflexive_relation.respond_to?(:include)
+        expect(reflexive_relation).to include(described)
+      else
+        expect(reflexive_relation).to eq described
+      end
     end
   end
 
   it "can return multiple relations" do
-    described_class_sym = described_class.name.downcase.to_sym
-    described_class_sym_plural = described_class.name.downcase.pluralize.to_sym
-    through_sym = through_name.to_s.singularize.to_sym
-    rel_sym = relation_name.to_s.singularize.to_sym
+    described_class_sym = get_class_sym_singular(described_class)
+    described_class_sym_plural = get_class_sym_plural(described_class)
+    through_sym = get_singular_symbol(through_name)
+    rel_sym = get_singular_symbol(relation_name)
     reflex = respond_to?(:reflexive) ? reflexive : described_class_sym_plural
 
     through_opt = {}
@@ -182,19 +192,27 @@ RSpec.shared_examples "a has_many, through relationship" do
 
     5.times do
       rel_opt = {}
-      rel_opt[through_sym] = create(through_sym, through_opt)
-      create(rel_sym, rel_opt)
+      through_relation = create(through_sym, through_opt)
+      begin
+        rel_opt[through_sym] = through_relation
+        create(rel_sym, rel_opt)
+      rescue
+        rel_opt = {}
+        rel_opt[get_plural_symbol(through_sym)] = [through_relation]
+      end
     end
 
     related = described.send(relation_name)
     expect(related.length).to eq 5
     related.each do |r|
       expect(r).to be_a_kind_of(relation_class)
-      reflexive_relation = r.send(reflex)
-      if reflexive_relation.respond_to?(:include)
-        expect(reflexive_relation).to include(described)
-      else
-        expect(reflexive_relation).to eq described
+      if reflex
+        reflexive_relation = r.send(reflex)
+        if reflexive_relation.respond_to?(:include)
+          expect(reflexive_relation).to include(described)
+        else
+          expect(reflexive_relation).to eq described
+        end
       end
     end
   end
@@ -230,8 +248,8 @@ RSpec.shared_examples "a has_one relationship" do
   end
 
   it "can return a single related instance" do
-    relation_class_sym = relation_name.to_s.singularize.to_sym
-    described_class_sym = described_class.name.downcase.to_sym
+    relation_class_sym = get_singular_symbol(relation_name)
+    described_class_sym = get_class_sym_singular(described_class)
     reflex = respond_to?(:reflexive) ? reflexive : described_class_sym
 
     opts = {}
@@ -276,7 +294,7 @@ RSpec.shared_examples "a has_one, through: relationship" do
   ##
   # Returns class constant of through: relation
   def through_class
-    through_name.to_s.singularize.camelize.constantize
+    get_class_constant(through_name)
   end
 
   it "responds to #relation_name and does not return a collection" do
@@ -289,8 +307,8 @@ RSpec.shared_examples "a has_one, through: relationship" do
   end
 
   it "can return a single related instance" do
-    described_class_sym = described_class.name.downcase.to_sym
-    through_sym = through_name.to_s.singularize.to_sym
+    described_class_sym = get_class_sym_singular(described_class)
+    through_sym = get_singular_symbol(through_name)
     reflex = respond_to(:reflexive) ? reflexive : described_class_sym
 
     through_opt = {}
@@ -344,16 +362,16 @@ end
 
 ##
 # Returns a singular class symbol from a class constant
-# get_class_sym(Coffee) #=> :coffee
+# get_class_sym_singular(Coffee) #=> :coffee
 def get_class_sym_singular(klass)
-  klass.name.downcase.to_sym
+  klass.name.tableize.singularize.to_sym
 end
 
 ##
 # Returns a plural class symbol from a class constant
 # get_class_sym_plural(Coffee) #=> :coffees
 def get_class_sym_plural(klass)
-  klass.name.downcase.pluralize.to_sym
+  klass.name.tableize.to_sym
 end
 
 ##
