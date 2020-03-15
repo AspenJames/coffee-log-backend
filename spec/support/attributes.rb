@@ -104,5 +104,5 @@ end
 # e.g. within RSpec.describe Coffee:
 # described_class_sym #=> :coffee
 def described_class_sym
-  described_class.name.downcase.to_sym
+  described_class.name.underscore.to_sym
 end
